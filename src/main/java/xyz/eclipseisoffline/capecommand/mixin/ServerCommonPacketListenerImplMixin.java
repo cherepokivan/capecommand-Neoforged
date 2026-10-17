@@ -13,7 +13,7 @@ import java.util.Base64;
 import java.util.List;
 
 import com.mojang.authlib.properties.PropertyMap;
-import io.netty.channel.ChannelFutureListener;
+import net.minecraft.network.PacketSendListener;
 import net.minecraft.network.protocol.Packet;
 import net.minecraft.network.protocol.common.ServerCommonPacketListener;
 import net.minecraft.network.protocol.game.ClientboundPlayerInfoUpdatePacket;
@@ -31,8 +31,8 @@ import xyz.eclipseisoffline.capecommand.network.ClientboundPlayerInfoUpdatePacke
 @Mixin(ServerCommonPacketListenerImpl.class)
 public abstract class ServerCommonPacketListenerImplMixin implements ServerCommonPacketListener {
 
-    @WrapOperation(method = "send(Lnet/minecraft/network/protocol/Packet;)V", at = @At(value = "INVOKE", target = "Lnet/minecraft/server/network/ServerCommonPacketListenerImpl;send(Lnet/minecraft/network/protocol/Packet;Lio/netty/channel/ChannelFutureListener;)V"))
-    public void modifyPlayerListPacket(ServerCommonPacketListenerImpl instance, Packet<?> packet, @Nullable ChannelFutureListener futureListener, Operation<Void> original) {
+    @WrapOperation(method = "send(Lnet/minecraft/network/protocol/Packet;)V", at = @At(value = "INVOKE", target = "Lnet/minecraft/server/network/ServerCommonPacketListenerImpl;send(Lnet/minecraft/network/protocol/Packet;Lnet/minecraft/network/PacketSendListener;)V"))
+    public void modifyPlayerListPacket(ServerCommonPacketListenerImpl instance, Packet<?> packet, @Nullable PacketSendListener sendListener, Operation<Void> original) {
         if (instance instanceof ServerGamePacketListenerImpl gamePacketListener && packet instanceof ClientboundPlayerInfoUpdatePacket playerInfoUpdatePacket) {
             ServerPlayer player = gamePacketListener.player;
             if (playerInfoUpdatePacket.actions().contains(ClientboundPlayerInfoUpdatePacket.Action.ADD_PLAYER)) {
@@ -53,7 +53,7 @@ public abstract class ServerCommonPacketListenerImplMixin implements ServerCommo
                 ((ClientboundPlayerInfoUpdatePacketEntriesUpdater) playerInfoUpdatePacket).capeCommand$setEntries(entries);
             }
         }
-        original.call(instance, packet, futureListener);
+        original.call(instance, packet, sendListener);
     }
 
     @Unique
