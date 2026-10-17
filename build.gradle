@@ -1,113 +1,50 @@
-import me.modmuss50.mpp.ReleaseType
-
 plugins {
-    id 'me.modmuss50.mod-publish-plugin' version '0.8.4'
-    id 'fabric-loom' version '1.10-SNAPSHOT'
+    id 'java'
+    id 'net.neoforged.gradle.userdev' version '7.0.190'
     id 'maven-publish'
 }
 
 version = project.mod_version
 group = project.maven_group
 
-base {
-    archivesName = project.archives_base_name
-}
-
 repositories {
-    maven {
-        url = uri("https://repo.opencollab.dev/main/")
-    }
+    maven { url = uri('https://repo.opencollab.dev/main/') }
 }
 
 dependencies {
-    minecraft "com.mojang:minecraft:${project.minecraft_version}"
-    mappings "net.fabricmc:yarn:${project.yarn_mappings}:v2"
-    modImplementation "net.fabricmc:fabric-loader:${project.loader_version}"
-
-    modImplementation "net.fabricmc.fabric-api:fabric-api:${project.fabric_version}"
-
+    implementation "net.neoforged:neoforge:${project.neoforge_version}"
     compileOnly "org.geysermc.geyser:api:${project.geyser_api_version}"
 }
 
-loom {
-    accessWidenerPath = file("src/main/resources/capecommand.accesswidener")
+sourceSets.main.resources.srcDir 'src/main/generated'
+java {
+    toolchain { languageVersion = JavaLanguageVersion.of(21) }
 }
+
 
 processResources {
-    inputs.property "version", project.version
-    inputs.property "supported_versions", project.supported_versions
-    inputs.property "loader_version", project.loader_version
-    filteringCharset "UTF-8"
-
-    filesMatching("fabric.mod.json") {
-        expand "version": project.version,
-                "supported_versions": project.supported_versions,
-                "loader_version": project.loader_version
+    inputs.property 'version', project.version
+    inputs.property 'neoforge_version', project.neoforge_version_range
+    inputs.property 'neoforge_minecraft_version', project.minecraft_version_range
+    inputs.property 'mod_id', project.mod_id
+    inputs.property 'mod_name', project.mod_name
+    inputs.property 'mod_description', project.mod_description
+    inputs.property 'modrinth_project_id', project.modrinth_project_id
+    filesMatching('META-INF/neoforge.mods.toml') {
+        expand version: project.version, mod_id: project.mod_id, mod_name: project.mod_name,
+                mod_description: project.mod_description, modrinth_project_id: project.modrinth_project_id,
+                github_repository: 'eclipseisoffline/capecommand', modrinth_id: project.modrinth_project_id,
+                neoforge_version: project.neoforge_version_range,
+                neoforge_minecraft_version: project.minecraft_version_range
     }
 }
 
-def targetJavaVersion = 21
-tasks.withType(JavaCompile).configureEach {
-    it.options.encoding = "UTF-8"
-    if (targetJavaVersion >= 10 || JavaVersion.current().isJava10Compatible()) {
-        it.options.release.set(targetJavaVersion)
-    }
-}
-
-java {
-    def javaVersion = JavaVersion.toVersion(targetJavaVersion)
-    if (JavaVersion.current() < javaVersion) {
-        toolchain.languageVersion = JavaLanguageVersion.of(targetJavaVersion)
-    }
-    withSourcesJar()
-}
 
 jar {
-    from("LICENSE") {
-        rename { "${it}_${project.archivesBaseName}"}
-    }
+    manifest { attributes 'Specification-Title': project.mod_name, 'Specification-Vendor': 'eclipseisoffline' }
+    from('LICENSE') { rename { "${it}_${project.archives_base_name}" } }
 }
 
 publishing {
-    repositories {
-        maven {
-            name = "eclipseisoffline"
-            url = "https://maven.eclipseisoffline.xyz/releases"
-            credentials(PasswordCredentials)
-            authentication {
-                basic(BasicAuthentication)
-            }
-        }
-    }
-
-    publications {
-        maven(MavenPublication) {
-            artifactId = project.archives_base_name
-            from components.java
-        }
-    }
-}
-
-publish {
-    dependsOn("publishMods")
-}
-
-publishMods {
-    changelog = new File("CHANGELOG.md").text
-    type = ReleaseType.of(release_type)
-
-    file = remapJar.archiveFile
-    modLoaders.add("fabric")
-
-    modrinth {
-        accessToken = providers.gradleProperty("MODRINTH_API_TOKEN")
-        projectId = "Ck0I4Uep"
-        minecraftVersions.addAll(release_minecraft_versions.split(","))
-    }
-
-    github {
-        accessToken = providers.gradleProperty("GITHUB_API_PUBLISH_TOKEN")
-        repository = "eclipseisoffline/capecommand"
-        commitish = "1.21.1"
-    }
+    publications { register('mavenJava', MavenPublication) { from components.java } }
 }
